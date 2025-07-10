@@ -28,4 +28,8 @@ public class Member {
     @ToString.Exclude
     private Provider provider;
 
+    @Enumerated
+    @Column(nullable = false)
+    private Role role;
+
 }
