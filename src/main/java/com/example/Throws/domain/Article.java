@@ -11,7 +11,6 @@ import org.hibernate.annotations.OnDeleteAction;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@ToString(exclude = {"member"})
 public class Article {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

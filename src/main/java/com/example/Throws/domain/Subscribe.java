@@ -13,11 +13,17 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@ToString(exclude = {"member"})
+
 public class Subscribe {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id")
+    @ToString.Exclude
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private Member member;
 
     @Column(nullable = false)
     private LocalDateTime startDate;
@@ -25,9 +31,27 @@ public class Subscribe {
     @Column(nullable = false)
     private LocalDateTime endDate;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id")
-    @ToString.Exclude
-    @OnDelete(action = OnDeleteAction.CASCADE)
-    private Member member;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SubscribeStatus status; // 구독상태 (TRIAL, ACTIVE, CANCELED, EXPIRED, REFUNDED 등)
+
+    @Column(nullable = true)
+    private LocalDateTime canceledAt; // 해지 요청 시각 (nullable)
+
+    @Column(nullable = true)
+    private LocalDateTime refundedAt; // 환불 시각 (nullable)
+
+    @Column(nullable = false)
+    private Boolean isTrial; // 무료체험 여부
+
+    @Column(nullable = true)
+    private String paymentProvider; // stripe, paypal 등 (nullable: 무료체험은 null)
+
+    @Column(nullable = true)
+    private String paymentId; // 결제 고유 ID(외부 결제사와 연동시 필요, 무료체험은 null)
+
+    @Column(nullable = false)
+    private int price; // 실제 결제금액(USD, 무료체험은 0)
+
+
 }

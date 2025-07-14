@@ -11,7 +11,7 @@ import org.hibernate.annotations.OnDeleteAction;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@ToString(exclude = {"member", "article"})
+
 public class Comment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

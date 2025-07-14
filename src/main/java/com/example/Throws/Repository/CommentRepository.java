@@ -12,5 +12,5 @@ import java.util.List;
 @Repository
 public interface CommentRepository {
     List<Comment> findByArticle(Article article);
-    List<Comment> findByUser(Member user);
+    List<Comment> findByMember(Member member);
 }
