@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import com.example.Throws.DTO.Login.LoginRequestDTO;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -42,9 +43,9 @@ public class AuthService {
 
 
             // 4. 응답 반환
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                    .build();
+            return ResponseEntity.ok(Map.of("token", token));
+                    //.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                    //.build();
 
         } catch (BadCredentialsException | UsernameNotFoundException e) {
 

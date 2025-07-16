@@ -15,4 +15,5 @@ public interface SubscribeRepository extends JpaRepository<Subscribe, Long>{
     Optional<Subscribe> findFirstByMemberOrderByEndDateDesc(Member member);
 
     List<Subscribe> findByMemberAndStatus(Member member, SubscribeStatus status);
+    List<Subscribe>findByMember(Member member);
 }

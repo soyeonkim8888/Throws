@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -38,52 +39,91 @@ public class SubscribeService {
 
     // 2. 구독 결제 (언제든 가능, 무료체험 중에도 바로 전환)
     @Transactional
-    public Subscribe startPaidSubscribe(Member member, String paymentProvider, String paymentId, int price) {
+    public Subscribe startPaidSubscribe(Member member, String paymentProvider, String paymentId, int price, boolean autoRenewal) {
         // 구독중이면 기간 연장 or 새로 시작 정책에 따라 처리
         Optional<Subscribe> latest = subscribeRepository.findFirstByMemberOrderByEndDateDesc(member);
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime newStartDate = now;
-        LocalDateTime newEndDate = now.plusMonths(1);
+        LocalDateTime newEndDate = now.plusDays(1);
 
-        // 무료체험 중이면 그 구독 레코드를 유료로 업데이트
-        if (latest.isPresent() && latest.get().getStatus() == SubscribeStatus.TRIAL) {
+        int renewalCount = 1;
+
+        if (latest.isPresent()) {
             Subscribe sub = latest.get();
-            sub.setStatus(SubscribeStatus.ACTIVE);
-            sub.setIsTrial(false);
-            sub.setStartDate(now);
-            sub.setEndDate(newEndDate);
-            sub.setPaymentProvider(paymentProvider);
-            sub.setPaymentId(paymentId);
-            sub.setPrice(price);
-            return subscribeRepository.save(sub);
-        } else if (latest.isPresent() && latest.get().getStatus() == SubscribeStatus.ACTIVE
-                && latest.get().getEndDate().isAfter(now)) {
-            // 유료 구독중이면 "기간연장"
-            Subscribe sub = latest.get();
-            sub.setEndDate(sub.getEndDate().plusMonths(1));
-            // 결제정보, price 등 필요시 갱신
-            sub.setPaymentProvider(paymentProvider);
-            sub.setPaymentId(paymentId);
-            sub.setPrice(sub.getPrice() + price); // 누적금액 (옵션)
-            return subscribeRepository.save(sub);
-        } else {
-            // 그 외엔 새로 시작
-            Subscribe sub = Subscribe.builder()
-                    .member(member)
-                    .startDate(newStartDate)
-                    .endDate(newEndDate)
-                    .status(SubscribeStatus.ACTIVE)
-                    .isTrial(false)
-                    .paymentProvider(paymentProvider)
-                    .paymentId(paymentId)
-                    .price(price)
-                    .build();
-            return subscribeRepository.save(sub);
+
+            // 이전 구독의 renewalCount 가져오기
+            renewalCount = sub.getRenewalCount() + 1;
+
+            // 무료체험 중이면 유료로 전환 (갱신1회)
+            if (sub.getStatus() == SubscribeStatus.TRIAL) {
+                sub.setStatus(SubscribeStatus.ACTIVE);
+                sub.setIsTrial(false);
+                sub.setStartDate(now);
+                sub.setEndDate(newEndDate);
+                sub.setPaymentProvider(paymentProvider);
+                sub.setPaymentId(paymentId);
+                sub.setPrice(price);
+                sub.setAutoRenewal(autoRenewal);
+                sub.setRenewalCount(renewalCount);
+                return subscribeRepository.save(sub);
+            }
+            // 유료 구독중이고 아직 만료 전: 자동갱신 여부 체크
+            if (sub.getStatus() == SubscribeStatus.ACTIVE && sub.getEndDate().isAfter(now)) {
+                if (sub.getAutoRenewal() != null && sub.getAutoRenewal()) {
+                    // 자동갱신 → 바로 연장
+                    sub.setEndDate(sub.getEndDate().plusMonths(1));
+                    sub.setPaymentProvider(paymentProvider);
+                    sub.setPaymentId(paymentId);
+                    sub.setPrice(price);
+                    sub.setRenewalCount(renewalCount);
+                    return subscribeRepository.save(sub);
+                } else {
+                    // 자동갱신 미신청 → 결제일에 별도 승인 로직 필요(여기선 안내만)
+                    throw new IllegalStateException("자동갱신 미신청 상태입니다. 결제일에 결제 여부를 확인하세요.");
+                }
+            }
         }
+
+        // 최초 유료 구독 시작
+        Subscribe sub = Subscribe.builder()
+                .member(member)
+                .startDate(now)
+                .endDate(newEndDate)
+                .status(SubscribeStatus.ACTIVE)
+                .isTrial(false)
+                .paymentProvider(paymentProvider)
+                .paymentId(paymentId)
+                .price(price)
+                .autoRenewal(Boolean.TRUE.equals(autoRenewal))
+                .renewalCount(renewalCount)
+                .build();
+        return subscribeRepository.save(sub);
     }
 
-    // 3. 구독 상태 조회
+    // 2. 결제일에 자동갱신 미신청 상태일 때, 결제 승인 확인(프론트 연동용)
+    public boolean needPaymentApproval(Member member) {
+        Optional<Subscribe> latest = subscribeRepository.findFirstByMemberOrderByEndDateDesc(member);
+        if (latest.isPresent()) {
+            Subscribe sub = latest.get();
+            // 만료 임박 && 자동갱신 X
+            LocalDateTime now = LocalDateTime.now();
+            if (!Boolean.TRUE.equals(sub.getAutoRenewal())
+                    && sub.getEndDate().isAfter(now)
+                    && sub.getEndDate().minusDays(1).isBefore(now)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 3. 누적 구독횟수 반환
+    public int getTotalRenewalCount(Member member) {
+        List<Subscribe> subs = subscribeRepository.findByMember(member);
+        return subs.stream().mapToInt(Subscribe::getRenewalCount).max().orElse(0);
+    }
+
+    // 4. 구독 상태 조회
     @Transactional(readOnly = true)
     public SubscribeStatus checkSubscribeStatus(Member member) {
         Optional<Subscribe> latest = subscribeRepository.findFirstByMemberOrderByEndDateDesc(member);
@@ -101,7 +141,7 @@ public class SubscribeService {
         return sub.getStatus();
     }
 
-    // 4. 구독 해지 (취소)
+    // 5. 구독 해지 (취소)
     @Transactional
     public void cancelSubscribe(Member member) {
         Optional<Subscribe> latest = subscribeRepository.findFirstByMemberOrderByEndDateDesc(member);
@@ -114,7 +154,7 @@ public class SubscribeService {
         subscribeRepository.save(sub);
     }
 
-    // 5. 환불 (7일 이내 전액환불)
+    // 6. 환불 (7일 이내 전액환불)
     @Transactional
     public void refundSubscribe(Member member) {
         Optional<Subscribe> latest = subscribeRepository.findFirstByMemberOrderByEndDateDesc(member);

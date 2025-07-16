@@ -11,8 +11,8 @@ import org.springframework.stereotype.Repository;
 import org.springframework.web.bind.annotation.*;
 import com.example.Throws.DTO.Subscribe.PaymentRequestDTO;
 
-
-@Controller
+@RestController
+@RequestMapping("/api/subscribe")
 @RequiredArgsConstructor
 public class SubscribeController {
     private final SubscribeService subscribeService;
@@ -29,7 +29,7 @@ public class SubscribeController {
     public Subscribe startPaid(@RequestBody PaymentRequestDTO dto) {
         // dto: { memberId, paymentProvider, paymentId, price }
         Member member= memberService.findById(dto.getMemberId());
-        return subscribeService.startPaidSubscribe(member, dto.getPaymentProvider(), dto.getPaymentId(), dto.getPrice());
+        return subscribeService.startPaidSubscribe(member, dto.getPaymentProvider(), dto.getPaymentId(), dto.getPrice(), dto.getAutoRenewal());
     }
 
     // 3. 구독 상태 확인

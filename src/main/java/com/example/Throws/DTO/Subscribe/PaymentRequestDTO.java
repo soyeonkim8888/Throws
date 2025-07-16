@@ -15,4 +15,5 @@ public class PaymentRequestDTO {
     private String paymentProvider;
     private String paymentId;
     private int price;
+    private Boolean autoRenewal;
 }

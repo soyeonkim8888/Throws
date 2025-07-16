@@ -5,6 +5,7 @@ import com.example.Throws.domain.Member;
 import com.example.Throws.Repository.MemberRepository;
 import com.example.Throws.domain.Role;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +15,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MemberService {
     private final MemberRepository memberRepository;
+    private final PasswordEncoder passwordEncoder;
     // 1. 회원 단건 조회 (ID로)
     public Member findById(Long id) {
         return memberRepository.findById(id)
@@ -40,7 +42,7 @@ public class MemberService {
         // provider 연동은 생략, 필요시 추가
         Member member = Member.builder()
                 .email(dto.getEmail())
-                .password(dto.getPassword())
+                .password(passwordEncoder.encode(dto.getPassword()))
                 .role(Role.ROLE_USER)      // ⭐️ 반드시 role 지정!
                 .build();
         return memberRepository.save(member);

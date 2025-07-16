@@ -53,5 +53,13 @@ public class Subscribe {
     @Column(nullable = false)
     private int price; // 실제 결제금액(USD, 무료체험은 0)
 
+    // ✅ 자동갱신 여부 추가
+    @Column(nullable = false)
+    private Boolean autoRenewal;
+
+    // ✅ 누적 구독 횟수
+    @Column(nullable = false)
+    private int renewalCount;
+
 
 }
