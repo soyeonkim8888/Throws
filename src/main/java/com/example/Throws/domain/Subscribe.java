@@ -60,6 +60,4 @@ public class Subscribe {
     // ✅ 누적 구독 횟수
     @Column(nullable = false)
     private int renewalCount;
-
-
 }

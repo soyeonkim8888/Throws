@@ -1,6 +1,9 @@
 package com.example.Throws.Service;
 
+import com.example.Throws.Security.CustomUserDetails;
 import com.example.Throws.Security.JwtTokenProvider;
+import com.example.Throws.domain.Member;
+import com.example.Throws.Service.TokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -22,6 +25,7 @@ public class AuthService {
 
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenService tokenService;
 
     public ResponseEntity<?> login(LoginRequestDTO dto) {
         try {
@@ -36,19 +40,19 @@ public class AuthService {
 
 
             // 3. 인증 성공 → JWT 토큰 생성
-            String token = jwtTokenProvider.createToken(
-                    authentication.getName(),               // email
-                    authentication.getAuthorities()         // ROLE_*
-            );
+           String accessToken = jwtTokenProvider.createAccessToken(authentication);
+           Member member = ((CustomUserDetails)authentication.getPrincipal()).getMember();
+           String refreshToken = tokenService.issueRefreshToken(authentication, member);
 
 
             // 4. 응답 반환
-            return ResponseEntity.ok(Map.of("token", token));
+            return ResponseEntity.ok(
+                    Map.of("accesstoken", accessToken,
+                            "refreshtoken", refreshToken));
                     //.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                     //.build();
 
         } catch (BadCredentialsException | UsernameNotFoundException e) {
-
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("로그인 실패: 아이디 또는 비밀번호가 틀렸습니다.");
         }

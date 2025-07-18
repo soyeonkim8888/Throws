@@ -15,10 +15,9 @@ public class Provider {
     @GeneratedValue
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String providerName;
 
     @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL)
     private List<Member> members;
-
 }

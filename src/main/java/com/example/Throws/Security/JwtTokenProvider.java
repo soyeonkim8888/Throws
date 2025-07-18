@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import io.jsonwebtoken.Claims;
@@ -28,8 +29,17 @@ public class JwtTokenProvider {
     @Value("${jwt.secret}") //lombok.Value랑 헷갈리면 안됨. 어노테이션 걸때 잘 확인해야함.
     private String secret;
 
-    private Key key;
+    @Value("${jwt.access-exp}")
+    private long accessExpiry;
 
+    @Value("${jwt.refresh-exp}")
+    private long refreshExpiry;
+
+    public long getRefreshExpiry() {   // ← Getter 추가
+        return refreshExpiry;
+    }
+
+    private Key key;
     private final CustomUserDetailsService customUserDetailsService;
 
     @PostConstruct
@@ -37,6 +47,7 @@ public class JwtTokenProvider {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
+    /*
     public String createToken(String email, Collection<? extends GrantedAuthority> roles) {
         Claims claims = Jwts.claims().setSubject(email);
         claims.put("roles", roles.stream()
@@ -50,6 +61,34 @@ public class JwtTokenProvider {
                 .setClaims(claims)
                 .setIssuedAt(now)
                 .setExpiration(expiry)
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
+ */
+
+    public String createAccessToken(Authentication auth) {
+        return buildToken(auth.getName(), auth.getAuthorities(), accessExpiry);
+    }
+
+    public String createRefreshToken(Authentication auth) {
+        // Refresh에는 권한 정보 불필요 → 빈 리스트
+        return buildToken(auth.getName(), List.of(), refreshExpiry);
+    }
+
+    private String buildToken(String email,
+                              Collection<? extends GrantedAuthority> roles,
+                              long ttlMillis) {
+
+        Claims claims = Jwts.claims().setSubject(email);
+        claims.put("roles", roles.stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList());
+
+        Date now = new Date();
+        return Jwts.builder()
+                .setClaims(claims)
+                .setIssuedAt(now)
+                .setExpiration(new Date(now.getTime() + ttlMillis))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }

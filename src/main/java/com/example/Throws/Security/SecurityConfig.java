@@ -40,7 +40,8 @@ public class SecurityConfig {
                                 "/api/members/register",
                                 "/h2-console/**",
                                 "/oauth2/**",
-                                "login/**"
+                                "login/**",
+                                "/api/token/refresh"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
