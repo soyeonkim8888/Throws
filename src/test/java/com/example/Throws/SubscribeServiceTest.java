@@ -1,8 +1,8 @@
 package com.example.Throws;
-import com.example.Throws.Service.SubscribeService;
+import com.example.Throws.service.SubscribeService;
 import com.example.Throws.domain.*;
-import com.example.Throws.Repository.MemberRepository;
-import com.example.Throws.Repository.SubscribeRepository;
+import com.example.Throws.repository.MemberRepository;
+import com.example.Throws.repository.SubscribeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
